@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cricer - Cricket Scoreboard & Match Simulator.">
+  <title>Cricer - Cricket Scoreboard & Simulator</title>
+
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Outfit:wght@300;400;600;700;900&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Main Application Overlay -->
+  <div id="app-overlay">
+
+    <!-- Top Navigation Header -->
+    <header class="header-bar">
+      <div class="brand-title">
+        <!-- 3D Metallic Rotating Cricket Ball Emblem Logo -->
+        <div class="logo-3d-wrapper" title="Cricer 3D Metallic Emblem Logo">
+          <div class="logo-3d-ball">
+            <div class="ball-seam"></div>
+            <div class="ball-shine"></div>
+            <div class="mini-bat">🏏</div>
+          </div>
+        </div>
+
+        <h1 class="animated-brand">CRICER</h1>
+      </div>
+
+      <div class="header-controls">
+        <button class="btn btn-sm btn-primary" id="btn-new-match"><i class="fa-solid fa-plus"></i> New Match</button>
+        <button class="btn btn-sm btn-danger" id="btn-cancel-match" style="display: none;"><i class="fa-solid fa-xmark"></i> Cancel Match</button>
+
+        <div class="status-pill" id="match-status-pill">
+          <span class="status-indicator"></span>
+          <span class="status-text">Match Ready</span>
+        </div>
+
+        <button class="btn btn-sm" id="btn-view-scorecard"><i class="fa-solid fa-table"></i> Scorecard</button>
+        <button class="btn btn-sm" id="btn-view-graph"><i class="fa-solid fa-chart-line"></i> Run Rate</button>
+      </div>
+    </header>
+
+    <!-- Active Matches Switcher Bar -->
+    <div id="active-matches-bar" class="active-matches-bar">
+      <!-- Dynamic match tabs rendered here -->
+    </div>
+
+    <!-- Main Compact Dashboard Grid -->
+    <main class="main-layout">
+
+      <!-- Left Panel: Match Config & Roster -->
+      <aside class="sidebar-panel">
+
+        <!-- Step 1: Match Setup Form Card -->
+        <div class="glass-card interactive-card" id="config-panel">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fa-solid fa-sliders"></i> Match Setup</h2>
+          </div>
+
+          <form id="match-setup-form">
+            <div class="form-group">
+              <label class="form-label">Team A Name</label>
+              <input type="text" id="teamA-input" class="form-control" value="" placeholder="Enter Team A Name" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Team B Name</label>
+              <input type="text" id="teamB-input" class="form-control" value="" placeholder="Enter Team B Name" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Match Venue / Stadium</label>
+              <input type="text" id="venue-input" class="form-control" value="" placeholder="e.g. Lords, London / Wankhede, Mumbai" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="form-group">
+                <label class="form-label">Players / Side</label>
+                <input type="number" id="team-size-input" class="form-control" min="2" max="11" value="11" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Max Overs</label>
+                <input type="number" id="overs-input" class="form-control" min="1" max="50" value="2" required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.4rem;">
+              <i class="fa-solid fa-arrow-right"></i> Next: Enter Player Rosters
+            </button>
+          </form>
+        </div>
+
+        <!-- Live Crease Batsmen & Bowler Card -->
+        <div class="glass-card interactive-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-user-group"></i> Active Crease</h3>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-sm" id="btn-quick-swap-strike" title="Swap Striker & Non-Striker"><i class="fa-solid fa-right-left"></i> Swap</button>
+              <button class="btn btn-sm" id="btn-change-batters" title="Change Crease Batters"><i class="fa-solid fa-pen"></i> Change</button>
+            </div>
+          </div>
+
+          <div class="crease-batsmen">
+            <!-- Batter 1 Card -->
+            <div class="batter-card" id="batter1-card">
+              <div class="batter-name">
+                <span class="bat-icon" id="batter1-bat-icon" style="display: none;">🏏</span>
+                <span id="batter1-name">Batter 1</span>
+              </div>
+              <div class="batter-stat" id="batter1-stats">0 (0)</div>
+            </div>
+
+            <!-- Batter 2 Card -->
+            <div class="batter-card" id="batter2-card">
+              <div class="batter-name">
+                <span class="bat-icon" id="batter2-bat-icon" style="display: none;">🏏</span>
+                <span id="batter2-name">Batter 2</span>
+              </div>
+              <div class="batter-stat" id="batter2-stats">0 (0)</div>
+            </div>
+          </div>
+
+          <!-- Bowler Card -->
+          <div style="margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div class="batter-card" style="border-color: var(--color-cyan);">
+              <div class="batter-name">
+                <i class="fa-solid fa-baseball" style="color: var(--color-cyan);"></i>
+                <span id="bowler-name">Bowler</span>
+                <button class="btn btn-sm" id="btn-change-bowler" style="padding: 2px 8px; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-pen"></i> Change</button>
+              </div>
+              <div class="batter-stat" id="bowler-stats">0/0 (0 ov)</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Center Stage Area (Live Banner HUD) -->
+      <section class="center-stage">
+
+        <!-- Live Scoreboard HUD Banner -->
+        <div class="live-score-banner interactive-card" id="live-hud" style="display: none;">
+          <div class="scoreboard-top">
+            <div class="team-display">
+              <div class="team-name" id="hud-bat-team">Team A</div>
+              <div class="team-score-big" id="hud-big-score">0/0</div>
+              <div class="team-overs-sub" id="hud-overs-sub">Overs: 0.0 / 2</div>
+            </div>
+
+            <div class="match-center-info">
+              <div class="venue-badge" id="hud-venue-badge">
+                <i class="fa-solid fa-location-dot"></i> <span id="hud-venue-val">Cricket Stadium</span>
+              </div>
+              <div class="target-badge" id="hud-target-badge" style="display: none;">
+                TARGET: <span id="hud-target-val">0</span>
+              </div>
+              <div class="crr-rrr-flex">
+                <div>CRR: <span id="hud-crr">0.00</span></div>
+                <div id="hud-rrr-wrapper" style="display: none;">RRR: <span id="hud-rrr">0.00</span></div>
+              </div>
+            </div>
+
+            <div class="team-display right">
+              <div class="team-name" id="hud-bowl-team">Team B</div>
+              <div class="team-overs-sub">Bowling Team</div>
+            </div>
+          </div>
+
+          <!-- Ball-by-Ball Recent History Bubbles -->
+          <div class="recent-balls-row">
+            <span class="recent-label">This Over:</span>
+            <div id="recent-balls-row" style="display: flex; gap: 8px;">
+              <div class="ball-bubble run-0">0</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Right Panel: Manual Ball Scoring Deck -->
+      <aside class="sidebar-panel">
+
+        <div class="glass-card interactive-card" id="control-deck" style="display: none; flex-direction: column; gap: 0.75rem;">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-gamepad"></i> Manual Scoring Deck</h3>
+          </div>
+
+          <!-- Normal Runs -->
+          <div class="action-grid">
+            <button class="action-btn" data-runs="0">0 <span class="sub-label">Dot Ball</span></button>
+            <button class="action-btn" data-runs="1">1 <span class="sub-label">Single</span></button>
+            <button class="action-btn" data-runs="2">2 <span class="sub-label">Double</span></button>
+            <button class="action-btn" data-runs="3">3 <span class="sub-label">Triple</span></button>
+            <button class="action-btn btn-four" data-runs="4">4 <span class="sub-label">FOUR!</span></button>
+            <button class="action-btn btn-six" data-runs="6">6 <span class="sub-label">SIX!</span></button>
+          </div>
+
+          <!-- Standard Wicket -->
+          <button class="action-btn btn-out" data-runs="-1" style="width: 100%;">
+            ❌ WICKET <span class="sub-label">Bowled / Caught / LBW</span>
+          </button>
+
+          <!-- Run-Out Options -->
+          <div class="section-label-sm">Run-Out Options:</div>
+          <div class="action-grid">
+            <button class="action-btn btn-out" data-runs="-2">🏃 0 Run <span class="sub-label">Runout + 0</span></button>
+            <button class="action-btn btn-out" data-runs="-3">🏃 1 Run <span class="sub-label">Runout + 1</span></button>
+            <button class="action-btn btn-out" data-runs="-4">🏃 2 Runs <span class="sub-label">Runout + 2</span></button>
+          </div>
+
+          <!-- Extras: Wides, Wide + Byes, No-Ball -->
+          <div class="section-label-sm">Wides & No-Ball:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <button class="action-btn" id="btn-wide" style="border-color: var(--color-gold);">⚠ WIDE <span class="sub-label">+1 Extra</span></button>
+            <button class="action-btn" id="btn-noball" style="border-color: var(--color-gold);">⚠ NO-BALL <span class="sub-label">+1 & Runs</span></button>
+          </div>
+
+          <div class="section-label-sm">Wide + Byes (WD + Byes):</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+            <button class="action-btn btn-extra-wide" data-widebyes="701">WD+1B</button>
+            <button class="action-btn btn-extra-wide" data-widebyes="702">WD+2B</button>
+            <button class="action-btn btn-extra-wide" data-widebyes="703">WD+3B</button>
+            <button class="action-btn btn-extra-wide" data-widebyes="704">WD+4B</button>
+          </div>
+
+          <!-- Byes Options -->
+          <div class="section-label-sm">Byes Options:</div>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+            <button class="action-btn btn-byes" data-byes="1">1 Bye</button>
+            <button class="action-btn btn-byes" data-byes="2">2 Byes</button>
+            <button class="action-btn btn-byes" data-byes="3">3 Byes</button>
+            <button class="action-btn btn-byes" data-byes="4">4 Byes</button>
+            <button class="action-btn btn-byes" data-byes="5">5 Byes</button>
+          </div>
+
+          <!-- Undo Last Ball Revert Option -->
+          <button class="btn btn-gold" id="btn-undo-ball" style="width: 100%; margin-top: 4px;">
+            <i class="fa-solid fa-rotate-left"></i> UNDO LAST BALL
+          </button>
+
+        </div>
+
+      </aside>
+
+    </main>
+
+  </div>
+
+  <!-- Player Rosters Input Modal -->
+  <div class="modal-overlay" id="roster-setup-modal">
+    <div class="modal-card" style="max-width: 750px;">
+      <div class="modal-header">
+        <h2 class="card-title"><i class="fa-solid fa-users"></i> Enter Players for Each Team</h2>
+        <button class="btn btn-sm" id="btn-back-to-setup"><i class="fa-solid fa-arrow-left"></i> Back to Setup</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; max-height: 55vh; overflow-y: auto; padding-right: 8px;">
+        <div>
+          <h3 style="color: var(--color-primary); margin-bottom: 0.6rem; font-size: 1.1rem;" id="roster-teamA-heading">Team A Players</h3>
+          <div id="teamA-roster-inputs"></div>
+        </div>
+
+        <div>
+          <h3 style="color: var(--color-cyan); margin-bottom: 0.6rem; font-size: 1.1rem;" id="roster-teamB-heading">Team B Players</h3>
+          <div id="teamB-roster-inputs"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn" id="btn-back-to-setup-footer"><i class="fa-solid fa-arrow-left"></i> Back to Team Setup</button>
+        <button class="btn btn-primary" id="btn-save-rosters"><i class="fa-solid fa-play"></i> Save Players & Start Toss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Crease Batters Modal -->
+  <div class="modal-overlay" id="change-batters-modal">
+    <div class="modal-card" style="max-width: 480px; text-align: center;">
+      <div class="modal-header">
+        <h2 class="card-title" style="justify-content: center;"><i class="fa-solid fa-user-pen"></i> Change Crease Batters</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Select Striker & Non-Striker for <span id="change-batters-team-span" style="color: var(--color-primary); font-weight: 700;"></span>:</p>
+
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label">On-Strike Batter (Facing 🏏)</label>
+        <select id="change-striker-select" class="form-control"></select>
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-top: 1rem;">
+        <label class="form-label">Non-Striker Batter</label>
+        <select id="change-nonstriker-select" class="form-control"></select>
+      </div>
+
+      <div style="margin-top: 1.5rem; display: flex; justify-content: space-between;">
+        <button class="btn btn-gold" id="modal-btn-swap-strike"><i class="fa-solid fa-right-left"></i> Swap Strike</button>
+        <button class="btn btn-primary" id="btn-save-change-batters"><i class="fa-solid fa-check"></i> Update Batters</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opening Batters Selection Modal -->
+  <div class="modal-overlay" id="select-openers-modal">
+    <div class="modal-card" style="max-width: 480px; text-align: center;">
+      <div class="modal-header" style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-sm" id="btn-back-to-toss"><i class="fa-solid fa-arrow-left"></i> Back to Toss</button>
+        <h2 class="card-title" style="justify-content: center;"><i class="fa-solid fa-user-group"></i> Select Opening Batters</h2>
+      </div>
+      <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Choose Opening Striker & Non-Striker for <span id="openers-team-name-span" style="color: var(--color-primary); font-weight: 700;"></span>:</p>
+
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label">Opening Striker (Facing First Ball 🏏)</label>
+        <select id="opening-striker-select" class="form-control"></select>
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-top: 1rem;">
+        <label class="form-label">Opening Non-Striker</label>
+        <select id="opening-nonstriker-select" class="form-control"></select>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: right;">
+        <button class="btn btn-primary" id="btn-confirm-openers"><i class="fa-solid fa-check"></i> Confirm Openers & Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bowler Selection Modal -->
+  <div class="modal-overlay" id="select-bowler-modal">
+    <div class="modal-card" style="max-width: 450px; text-align: center;">
+      <div class="modal-header" style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-sm" id="btn-back-to-openers"><i class="fa-solid fa-arrow-left"></i> Back to Batters</button>
+        <h2 class="card-title" style="justify-content: center;"><i class="fa-solid fa-baseball"></i> Select Bowler</h2>
+      </div>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Choose bowler from <span id="bowling-team-name-span" style="color: var(--color-cyan); font-weight: 700;"></span>:</p>
+
+      <div id="bowler-options-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- Incoming Batsman Selection Modal -->
+  <div class="modal-overlay" id="select-batsman-modal">
+    <div class="modal-card" style="max-width: 450px; text-align: center;">
+      <h2 class="card-title" style="justify-content: center; margin-bottom: 1rem;"><i class="fa-solid fa-user-plus"></i> Wicket Fallen! Select Next Batsman</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Choose next incoming batter for <span id="batting-team-name-span" style="color: var(--color-primary); font-weight: 700;"></span>:</p>
+
+      <div id="batsman-options-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- Toss Modal Arena -->
+  <div class="modal-overlay" id="toss-modal">
+    <div class="modal-card toss-arena">
+      <h2 style="font-family: var(--font-heading); font-size: 2rem; margin-bottom: 0.5rem;" id="toss-teams-title">Toss Arena</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem;" id="toss-anim-msg">Call Heads or Tails for coin toss</p>
+
+      <div class="coin-3d-placeholder">
+        <div style="font-size: 5rem; color: var(--color-gold);">🪙</div>
+      </div>
+
+      <div id="toss-call-section">
+        <div style="display: flex; justify-content: center; gap: 1rem;">
+          <button class="btn btn-gold" id="toss-call-heads" style="min-width: 140px;">Heads</button>
+          <button class="btn btn-gold" id="toss-call-tails" style="min-width: 140px;">Tails</button>
+        </div>
+      </div>
+
+      <div id="toss-choice-section" style="display: none; margin-top: 1.5rem;">
+        <h3 id="toss-result-text" style="color: var(--color-primary); margin-bottom: 0.5rem;"></h3>
+        <p id="toss-winner-prompt" style="color: var(--color-gold); font-size: 1.1rem; font-weight: 700; margin-bottom: 1.2rem;"></p>
+        
+        <div style="display: flex; justify-content: center; gap: 1rem;">
+          <button class="btn btn-primary" id="choice-bat"><i class="fa-solid fa-baseball-bat-ball"></i> Choose to BAT First</button>
+          <button class="btn btn-primary" id="choice-bowl"><i class="fa-solid fa-bowling-ball"></i> Choose to BOWL First</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scorecard Structured Table Modal -->
+  <div class="modal-overlay" id="scorecard-modal">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h2 class="card-title"><i class="fa-solid fa-table"></i> Official Match Scorecard Summary</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+
+      <div id="scorecard-tables-container" style="display: flex; flex-direction: column; gap: 1.5rem;"></div>
+
+      <div style="margin-top: 1.5rem; text-align: right;">
+        <button class="btn btn-primary" id="btn-download-scorecard"><i class="fa-solid fa-download"></i> Save Scorecard Text</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run Rate Graph SVG Modal -->
+  <div class="modal-overlay" id="graph-modal">
+    <div class="modal-card" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2 class="card-title"><i class="fa-solid fa-chart-line"></i> Run Rate & Statistical Projections</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+
+      <div class="graph-stats-grid">
+        <div class="graph-stat-card">
+          <div class="stat-label">Current Score</div>
+          <div class="stat-val" id="graph-stat-score">0/0</div>
+        </div>
+
+        <div class="graph-stat-card">
+          <div class="stat-label">Current CRR</div>
+          <div class="stat-val" id="graph-stat-crr">0.00</div>
+        </div>
+
+        <div class="graph-stat-card">
+          <div class="stat-label">Projected Score</div>
+          <div class="stat-val" id="graph-stat-projected" style="color: var(--color-gold);">0</div>
+        </div>
+
+        <div class="graph-stat-card">
+          <div class="stat-label">Max Ball Score</div>
+          <div class="stat-val" id="graph-stat-max">0</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; background: #030712; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-top: 1rem;">
+        <svg id="worm-chart-svg" width="100%" height="260" viewBox="0 0 500 260"></svg>
+        <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.85rem;">
+          <span style="color: var(--color-primary); font-weight: 600;" id="graph-legend-teamA">— 1st Innings (Ball-by-Ball)</span>
+          <span style="color: var(--color-cyan); font-weight: 600;" id="graph-legend-teamB">— 2nd Innings (Ball-by-Ball)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match Ended Winner Modal -->
+  <div class="modal-overlay" id="match-ended-modal">
+    <div class="modal-card" style="text-align: center;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;">🏆</div>
+      <h1 id="winner-banner-title" style="font-family: var(--font-heading); font-size: 2.4rem; color: var(--color-gold);">VICTORY!</h1>
+      <p id="winner-banner-sub" style="font-size: 1.2rem; color: var(--text-main); margin-bottom: 1.5rem;"></p>
+
+      <div style="background: rgba(0,255,136,0.1); border: 1px solid var(--color-primary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+        <div style="font-size: 0.85rem; color: var(--color-primary); font-weight: 600; text-transform: uppercase;">Player of the Match</div>
+        <div id="mvp-player-name" style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700;">MVP</div>
+      </div>
+
+      <button class="btn btn-primary modal-close"><i class="fa-solid fa-check"></i> Close & View Scorecard</button>
+    </div>
+  </div>
+
+  <!-- Main Web App Script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
