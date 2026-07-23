@@ -1,11 +1,11 @@
 /**
  * App.js - Main Application Coordinator for Cricer
- * Handles option to change striker and non-striker mid-match,
+ * Handles match lifecycle, option to change striker/non-striker mid-match,
  * ball-by-ball over progression display (0.1, 0.2, 0.3, 0.4, 0.5, 1.0),
  * venue location tracking, structured table scorecard modal,
- * Multi-Match Simultaneous Management, Change Bowler option, No Consecutive Overs rule,
- * Cancel Match option, player roster inputs, opening batter selection,
- * manual ball-by-ball scoring deck, undo delivery option, and statistical run rate graph.
+ * Change Bowler option, No Consecutive Overs rule, Cancel Match option,
+ * player roster inputs, opening batter selection, manual ball-by-ball scoring deck,
+ * undo delivery option, and statistical run rate graph.
  */
 
 import { 
@@ -21,7 +21,7 @@ import {
 } from './cricketEngine.js';
 
 class MatchInstance {
-  constructor(id, nameA, nameB, teamSize, maxOvers, venue = 'Cricket Stadium') {
+  constructor(id = 'match-1', nameA = '', nameB = '', teamSize = 11, maxOvers = 2, venue = 'Cricket Stadium') {
     this.id = id;
     this.gameState = 'CONFIG';
     this.teamAName = nameA;
@@ -53,73 +53,29 @@ class MatchInstance {
 
 class CricerApp {
   constructor() {
-    this.matches = [];
-    this.activeMatchId = null;
-    this.matchCounter = 1;
-
+    this.match = new MatchInstance();
     this.init();
   }
 
   init() {
-    this.createNewMatch();
+    this.loadMatchStateToUI();
     this.bindEvents();
   }
 
   get activeMatch() {
-    return this.matches.find(m => m.id === this.activeMatchId) || this.matches[0];
+    return this.match;
   }
 
-  createNewMatch() {
-    const id = `match-${Date.now()}-${this.matchCounter++}`;
-    const newM = new MatchInstance(id, '', '', 11, 2, 'Cricket Stadium');
-    this.matches.push(newM);
-    this.activeMatchId = id;
-    this.renderActiveMatchesBar();
-    this.loadMatchStateToUI();
-  }
-
-  renderActiveMatchesBar() {
-    const bar = document.getElementById('active-matches-bar');
-    if (!bar) return;
-
-    if (this.matches.length <= 1 && this.activeMatch.gameState === 'CONFIG') {
-      bar.style.display = 'none';
-      return;
-    }
-
-    bar.style.display = 'flex';
-    bar.innerHTML = this.matches.map((m, idx) => {
-      const isActive = m.id === this.activeMatchId ? 'active' : '';
-      const title = (m.teamA && m.teamB) 
-        ? `${m.teamA.country} vs ${m.teamB.country}` 
-        : `Match #${idx + 1}`;
-      const score = m.currentInnings 
-        ? `(${m.currentInnings.totalRuns}/${m.currentInnings.totalWickets})` 
-        : '';
-      return `
-        <div class="match-tab ${isActive}" data-matchid="${m.id}">
-          <i class="fa-solid fa-trophy"></i>
-          <span>${title} ${score}</span>
-        </div>
-      `;
-    }).join('');
-
-    bar.querySelectorAll('.match-tab').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        const id = e.currentTarget.dataset.matchid;
-        this.switchActiveMatch(id);
-      });
-    });
-  }
-
-  switchActiveMatch(id) {
-    this.activeMatchId = id;
-    this.renderActiveMatchesBar();
+  resetMatch() {
+    this.match = new MatchInstance();
     this.loadMatchStateToUI();
   }
 
   loadMatchStateToUI() {
     const m = this.activeMatch;
+
+    // Close any active modals
+    document.querySelectorAll('.modal-overlay').forEach(mod => mod.classList.remove('active'));
 
     const cancelBtn = document.getElementById('btn-cancel-match');
     if (cancelBtn) {
@@ -136,21 +92,39 @@ class CricerApp {
       document.getElementById('team-size-input').value = m.teamSize;
       document.getElementById('overs-input').value = m.maxOvers;
       this.updateStatusBadge('Match Setup', '');
+    } else if (m.gameState === 'ROSTER_SETUP') {
+      document.getElementById('config-panel').style.display = 'none';
+      document.getElementById('live-hud').style.display = 'none';
+      document.getElementById('control-deck').style.display = 'none';
+      this.openRosterSetupModal();
+    } else if (m.gameState === 'TOSS') {
+      document.getElementById('config-panel').style.display = 'none';
+      document.getElementById('live-hud').style.display = 'none';
+      document.getElementById('control-deck').style.display = 'none';
+      document.getElementById('toss-modal').classList.add('active');
+      document.getElementById('toss-teams-title').innerText = `${m.teamA.country} vs ${m.teamB.country}`;
+    } else if (m.gameState === 'SELECT_OPENERS') {
+      document.getElementById('config-panel').style.display = 'none';
+      document.getElementById('live-hud').style.display = 'none';
+      document.getElementById('control-deck').style.display = 'none';
+      this.promptOpeningBattersSelection();
     } else {
       document.getElementById('config-panel').style.display = 'none';
       document.getElementById('live-hud').style.display = 'block';
       document.getElementById('control-deck').style.display = 'flex';
-      this.updateStatusBadge(`${m.gameState === 'INNINGS1' ? '1st' : '2nd'} Innings: ${m.currentInnings?.battingTeam.country || ''}`, 'live');
+      this.updateStatusBadge(`${m.gameState === 'INNINGS1' ? '1st' : (m.gameState === 'INNINGS2' ? '2nd' : 'Super Over')} Innings: ${m.currentInnings?.battingTeam.country || ''}`, 'live');
       this.updateScoreboardUI();
+
+      if (m.currentInnings?.needsNewBatsman && !m.currentInnings.isCompleted) {
+        this.promptIncomingBatsmanSelection();
+      } else if (m.currentInnings?.needsNewBowler && !m.currentInnings.isCompleted) {
+        this.promptBowlerSelection();
+      }
     }
   }
 
   bindEvents() {
-    // Header Buttons: New Match & Cancel Match
-    document.getElementById('btn-new-match')?.addEventListener('click', () => {
-      this.createNewMatch();
-    });
-
+    // Header Control: Cancel Match
     document.getElementById('btn-cancel-match')?.addEventListener('click', () => {
       this.handleCancelMatch();
     });
@@ -324,23 +298,13 @@ class CricerApp {
 
   handleCancelMatch() {
     if (confirm("Are you sure you want to cancel this match? Progress will be lost.")) {
-      if (this.matches.length > 1) {
-        this.matches = this.matches.filter(m => m.id !== this.activeMatchId);
-        this.activeMatchId = this.matches[0].id;
-      } else {
-        const m = this.activeMatch;
-        m.gameState = 'CONFIG';
-        m.currentInnings = null;
-        m.firstInnings = null;
-        m.secondInnings = null;
-      }
-      this.renderActiveMatchesBar();
-      this.loadMatchStateToUI();
+      this.resetMatch();
     }
   }
 
   openRosterSetupModal() {
     const m = this.activeMatch;
+    m.gameState = 'ROSTER_SETUP';
     m.teamAName = document.getElementById('teamA-input').value.trim() || 'Team A';
     m.teamBName = document.getElementById('teamB-input').value.trim() || 'Team B';
     m.venue = document.getElementById('venue-input').value.trim() || 'Cricket Stadium';
@@ -354,7 +318,7 @@ class CricerApp {
     inputsA.innerHTML = Array.from({ length: m.teamSize }, (_, i) => `
       <div class="form-group">
         <label class="form-label">Player ${i + 1}</label>
-        <input type="text" class="form-control roster-input-a" value="" placeholder="Player ${i + 1} Name" required>
+        <input type="text" class="form-control roster-input-a" value="${m.teamAPlayers[i] || ''}" placeholder="Player ${i + 1} Name" required>
       </div>
     `).join('');
 
@@ -362,7 +326,7 @@ class CricerApp {
     inputsB.innerHTML = Array.from({ length: m.teamSize }, (_, i) => `
       <div class="form-group">
         <label class="form-label">Player ${i + 1}</label>
-        <input type="text" class="form-control roster-input-b" value="" placeholder="Player ${i + 1} Name" required>
+        <input type="text" class="form-control roster-input-b" value="${m.teamBPlayers[i] || ''}" placeholder="Player ${i + 1} Name" required>
       </div>
     `).join('');
 
@@ -385,7 +349,6 @@ class CricerApp {
 
     m.gameState = 'TOSS';
     this.updateStatusBadge('Toss in Progress', 'live');
-    this.renderActiveMatchesBar();
 
     document.getElementById('toss-modal').classList.add('active');
     document.getElementById('toss-teams-title').innerText = `${m.teamA.country} vs ${m.teamB.country}`;
@@ -433,7 +396,7 @@ class CricerApp {
 
     m.firstInnings = new InningsState(m.inningsOrder.battingFirst, m.inningsOrder.bowlingFirst, m.maxOvers, 0, m.venue);
     m.currentInnings = m.firstInnings;
-    m.gameState = 'INNINGS1';
+    m.gameState = 'SELECT_OPENERS';
 
     this.promptOpeningBattersSelection();
   }
@@ -466,6 +429,8 @@ class CricerApp {
 
     m.currentInnings.setOpeners(strikerVal, nonStrikerVal);
     document.getElementById('select-openers-modal').classList.remove('active');
+
+    m.gameState = (m.currentInnings === m.firstInnings) ? 'INNINGS1' : 'INNINGS2';
 
     document.getElementById('live-hud').style.display = 'block';
     document.getElementById('control-deck').style.display = 'flex';
@@ -567,7 +532,6 @@ class CricerApp {
     const res = m.currentInnings.processBall(r, extraParam);
     if (!res) return;
 
-    this.renderActiveMatchesBar();
     this.updateScoreboardUI();
 
     if (res.needsNewBatsman && !m.currentInnings.isCompleted) {
@@ -584,7 +548,6 @@ class CricerApp {
     if (!m.currentInnings) return;
     const success = m.currentInnings.undoLastBall();
     if (success) {
-      this.renderActiveMatchesBar();
       this.updateScoreboardUI();
     } else {
       alert("No previous balls to undo in this match!");
@@ -603,7 +566,7 @@ class CricerApp {
         m.venue
       );
       m.currentInnings = m.secondInnings;
-      m.gameState = 'INNINGS2';
+      m.gameState = 'SELECT_OPENERS';
 
       this.updateStatusBadge(`2nd Innings: ${m.inningsOrder.battingSecond.country} (Target: ${target})`, 'live');
       alert(`End of 1st Innings!\n${m.inningsOrder.battingFirst.country}: ${m.firstInnings.totalRuns}/${m.firstInnings.totalWickets}\nTarget for ${m.inningsOrder.battingSecond.country}: ${target} runs.`);
