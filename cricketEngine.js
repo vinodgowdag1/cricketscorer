@@ -157,8 +157,10 @@ export class InningsState {
     let bStat = this.getBowlerStat(bowlerName);
     this.currentBowlerName = bStat.name;
 
-    if (this.overs.length > 0) {
-      this.overs[this.overs.length - 1].bowlerName = bStat.name;
+    if (this.overs.length <= this.currentOverIndex) {
+      this.startNewOver();
+    } else {
+      this.overs[this.currentOverIndex].bowlerName = bStat.name;
     }
     this.needsNewBowler = false;
   }
@@ -265,6 +267,12 @@ export class InningsState {
   }
 
   processBall(r, extraParam = 0) {
+    if (this.isCompleted) return null;
+
+    if (this.overs.length <= this.currentOverIndex) {
+      this.startNewOver();
+    }
+
     if (this.isCompleted) return null;
 
     this.saveSnapshot(r, extraParam);

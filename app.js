@@ -551,6 +551,9 @@ class CricerApp {
         inns.setIncomingBatsman(selected);
         modal.classList.remove('active');
         this.updateScoreboardUI();
+        if (inns.needsNewBowler && !inns.isCompleted) {
+          this.promptBowlerSelection();
+        }
       });
     });
 
